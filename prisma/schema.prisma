@@ -1,0 +1,258 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PublishStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  EDITOR
+}
+
+enum MediaFolder {
+  DESTINATIONS
+  UNIVERSITIES
+  GALLERY
+  COURSES
+  BANNERS
+  GENERAL
+}
+
+enum InquiryStatus {
+  NEW
+  CONTACTED
+  IN_PROGRESS
+  CONVERTED
+  CLOSED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String?
+  email        String   @unique
+  passwordHash String
+  role         UserRole @default(EDITOR)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Country {
+  id           String            @id @default(cuid())
+  name         String            @unique
+  code         String            @unique
+  destinations DestinationPage[]
+  universities University[]
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+}
+
+model DestinationPage {
+  id        String               @id @default(cuid())
+  countryId String               @unique
+  country   Country              @relation(fields: [countryId], references: [id], onDelete: Cascade)
+  slug      String               @unique
+  title     String
+  content   Json
+  status    PublishStatus        @default(DRAFT)
+  sections  DestinationSection[]
+  seo       SeoMetadata?
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+
+  @@index([status])
+}
+
+model DestinationSection {
+  id      String          @id @default(cuid())
+  pageId  String
+  page    DestinationPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  key     String
+  title   String
+  content Json
+  order   Int             @default(0)
+  status  PublishStatus   @default(PUBLISHED)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@unique([pageId, key])
+  @@index([pageId, order])
+}
+
+model University {
+  id        String                  @id @default(cuid())
+  countryId String
+  country   Country                 @relation(fields: [countryId], references: [id])
+  slug      String                  @unique
+  name      String
+  campus    String                  @default("")
+  website   String                  @default("")
+  logo      Json?
+  banner    Json?
+  content   Json
+  status    PublishStatus           @default(DRAFT)
+  courses   UniversityCourse[]
+  gallery   UniversityGallery[]
+  sections  UniversityPageSection[]
+  seo       SeoMetadata?
+  createdAt DateTime                @default(now())
+  updatedAt DateTime                @updatedAt
+
+  @@index([countryId, status])
+  @@index([name])
+}
+
+model UniversityCourse {
+  id           String     @id @default(cuid())
+  universityId String
+  university   University @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  name         String
+  degreeLevel  String     @default("")
+  annualFee    String     @default("")
+  currency     String     @default("")
+  duration     String     @default("")
+  intakes      String[]   @default([])
+  eligibility  String     @default("")
+  description  String     @default("")
+  status       PublishStatus @default(DRAFT)
+  content      Json?
+  order        Int        @default(0)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([universityId, order])
+}
+
+model UniversityGallery {
+  id           String     @id @default(cuid())
+  universityId String
+  university   University @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  mediaId      String?
+  media        Media?     @relation(fields: [mediaId], references: [id], onDelete: SetNull)
+  url          String
+  altText      String     @default("")
+  order        Int        @default(0)
+
+  @@index([universityId, order])
+}
+
+model UniversityPageSection {
+  id           String     @id @default(cuid())
+  universityId String
+  university   University @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  key          String
+  title        String
+  content      Json
+  order        Int        @default(0)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([universityId, key])
+  @@index([universityId, order])
+}
+
+model GalleryCategory {
+  id    String    @id @default(cuid())
+  name  String    @unique
+  slug  String    @unique
+  items Gallery[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Gallery {
+  id          String           @id @default(cuid())
+  categoryId  String?
+  category    GalleryCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  slug        String           @unique
+  title       String
+  description String           @default("")
+  mediaIds    String[]         @default([])
+  media       GalleryMedia[]
+  videoUrl    String?
+  status      PublishStatus    @default(DRAFT)
+  seo         SeoMetadata?
+  order       Int              @default(0)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([status, order])
+}
+
+model Media {
+  id               String              @id @default(cuid())
+  url              String
+  publicId         String?
+  folder           MediaFolder         @default(GENERAL)
+  name             String
+  mimeType         String
+  width            Int?
+  height           Int?
+  thumbnailPath    String?
+  altText          String              @default("")
+  size             Int?
+  createdAt        DateTime            @default(now())
+  universityImages UniversityGallery[]
+  galleryItems     GalleryMedia[]
+}
+
+model GalleryMedia {
+  galleryId String
+  mediaId   String
+  order     Int     @default(0)
+  createdAt DateTime @default(now())
+  gallery   Gallery @relation(fields: [galleryId], references: [id], onDelete: Cascade)
+  media     Media   @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@id([galleryId, mediaId])
+  @@index([galleryId, order])
+}
+
+model Inquiry {
+  id              String        @id @default(cuid())
+  enquiryNumber   Int           @unique @default(autoincrement())
+  submissionKey   String?       @unique
+  studentName     String
+  phone           String
+  serviceRequired String
+  status          InquiryStatus @default(NEW)
+  createdAt       DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime      @default(now()) @updatedAt @db.Timestamptz(3)
+
+  @@index([createdAt])
+  @@index([phone])
+  @@index([serviceRequired])
+  @@index([status])
+}
+
+model SiteSetting {
+  key String @id
+  value Json
+  updatedAt DateTime @updatedAt
+}
+
+model SeoMetadata {
+  id            String           @id @default(cuid())
+  title         String?
+  description   String?
+  keywords      String[]         @default([])
+  canonicalUrl  String?
+  ogImage       String?
+  destinationId String?          @unique
+  destination   DestinationPage? @relation(fields: [destinationId], references: [id], onDelete: Cascade)
+  universityId  String?          @unique
+  university    University?      @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  galleryId     String?          @unique
+  gallery       Gallery?         @relation(fields: [galleryId], references: [id], onDelete: Cascade)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+}
