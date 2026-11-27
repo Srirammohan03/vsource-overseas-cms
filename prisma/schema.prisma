@@ -12,6 +12,18 @@ enum PublishStatus {
   PUBLISHED
 }
 
+enum OfficeBranch {
+  DILSUKNAGAR
+  JNTU
+  VIJAYAWADA
+}
+
+enum OfficeArea {
+  COUNSELING_AREA
+  APPLICATION_PROCESSING_UK
+  CAFETERIA
+}
+
 enum UserRole {
   SUPER_ADMIN
   ADMIN
@@ -203,6 +215,7 @@ model Media {
   createdAt        DateTime            @default(now())
   universityImages UniversityGallery[]
   galleryItems     GalleryMedia[]
+  officeGalleryItems OfficeGalleryMedia[]
 }
 
 model GalleryMedia {
@@ -215,6 +228,31 @@ model GalleryMedia {
 
   @@id([galleryId, mediaId])
   @@index([galleryId, order])
+}
+
+model OfficeGallery {
+  id        String               @id @default(cuid())
+  branch    OfficeBranch
+  area      OfficeArea
+  status    PublishStatus        @default(DRAFT)
+  media     OfficeGalleryMedia[]
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+
+  @@unique([branch, area])
+  @@index([status, branch, area])
+}
+
+model OfficeGalleryMedia {
+  officeGalleryId String
+  mediaId         String
+  order           Int           @default(0)
+  createdAt       DateTime      @default(now())
+  officeGallery   OfficeGallery @relation(fields: [officeGalleryId], references: [id], onDelete: Cascade)
+  media           Media         @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@id([officeGalleryId, mediaId])
+  @@index([officeGalleryId, order])
 }
 
 model Inquiry {

@@ -22,7 +22,7 @@ const Footer = () => {
             <div className="flex flex-wrap gap-4 justify-center md:justify-start">
               {[
                 {
-                  href: "https://www.facebook.com/share/Up9qaiBuTj25dG5z/?mibextid=qi2Omg",
+                  href: "https://www.facebook.com/vsourceoverseas1/",
                   src: "/assets/images/icons/fb.webp",
                   alt: "Facebook",
                 },
@@ -81,12 +81,9 @@ const Footer = () => {
                 "Top UK Universities",
               ]?.map((service) => (
                 <li key={service}>
-                  <Link
-                    to="/"
-                    className="text-gray-400 hover:text-white transition-colors"
-                  >
+                  <p className="text-gray-400 hover:text-white transition-colors">
                     {service}
-                  </Link>
+                  </p>
                 </li>
               ))}
             </ul>
@@ -122,10 +119,14 @@ const Footer = () => {
                 </li>
               ))}
               {isLoading && destinations.length === 0 && (
-                <li className="text-gray-400" aria-live="polite">Loading destinations…</li>
+                <li className="text-gray-400" aria-live="polite">
+                  Loading destinations…
+                </li>
               )}
               {isError && destinations.length === 0 && (
-                <li className="text-gray-400" aria-live="polite">Destinations unavailable</li>
+                <li className="text-gray-400" aria-live="polite">
+                  Destinations unavailable
+                </li>
               )}
             </ul>
           </div>

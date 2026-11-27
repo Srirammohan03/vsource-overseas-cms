@@ -4,7 +4,7 @@ import { z } from "zod";
 import { hash } from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { requireApiRole } from "@/lib/permissions";
-import { courseInputSchema, destinationInputSchema, galleryInputSchema, universityInputSchema, userCreateSchema, statusSchema } from "@/features/cms/schemas";
+import { courseInputSchema, destinationInputSchema, galleryInputSchema, officeGalleryInputSchema, universityInputSchema, userCreateSchema, statusSchema } from "@/features/cms/schemas";
 
 const countries = [{ name: "UK", code: "UK" }, { name: "USA", code: "USA" }, { name: "Canada", code: "CANADA" }, { name: "Ireland", code: "IRELAND" }, { name: "France", code: "FRANCE" }];
 const fail = (error: unknown, action: string) => {
@@ -33,6 +33,7 @@ export async function GET(request: Request, context: { params: Promise<{ resourc
     if (resource === "destinations") return NextResponse.json(await prisma.destinationPage.findMany({ include: { country: true, sections: { orderBy: { order: "asc" } }, seo: true }, orderBy: { updatedAt: "desc" } }));
     if (resource === "universities") return NextResponse.json(await prisma.university.findMany({ include: { country: true, courses: { orderBy: { order: "asc" } }, sections: { orderBy: { order: "asc" } }, gallery: { include: { media: true }, orderBy: { order: "asc" } } }, orderBy: { updatedAt: "desc" } }));
     if (resource === "gallery") return NextResponse.json(await prisma.gallery.findMany({ include: { category: true, media: { include: { media: true }, orderBy: { order: "asc" } }, seo: true }, orderBy: [{ order: "asc" }, { updatedAt: "desc" }] }));
+    if (resource === "office-gallery") return NextResponse.json(await prisma.officeGallery.findMany({ include: { media: { include: { media: true }, orderBy: { order: "asc" } } }, orderBy: [{ branch: "asc" }, { area: "asc" }] }));
     if (resource === "courses") return NextResponse.json(await prisma.universityCourse.findMany({ include: { university: { select: { id: true, name: true, slug: true, country: { select: { name: true } } } } }, orderBy: [{ university: { name: "asc" } }, { order: "asc" }] }));
     if (resource === "users") return NextResponse.json(await prisma.user.findMany({ select: { id: true, name: true, email: true, role: true, isActive: true, createdAt: true, updatedAt: true }, orderBy: { createdAt: "asc" } }));
     if (resource === "settings") return NextResponse.json(await prisma.siteSetting.findMany({ orderBy: { key: "asc" } }));
@@ -70,6 +71,48 @@ export async function POST(request: Request, context: { params: Promise<{ resour
       const saved = await prisma.gallery.create({ data: { slug: data.slug, title: data.title, description: data.description, status: data.status, order: data.order, categoryId: category?.id || null, mediaIds } });
       await prisma.$transaction([prisma.galleryMedia.deleteMany({ where: { galleryId: saved.id } }), ...data.media.map((file, order) => prisma.galleryMedia.create({ data: { galleryId: saved.id, mediaId: file.id, order } })), ...data.media.map(file => prisma.media.update({ where: { id: file.id }, data: { altText: file.altText } }))]);
       return NextResponse.json(await prisma.gallery.findUnique({ where: { id: saved.id }, include: { category: true, media: { include: { media: true }, orderBy: { order: "asc" } } } }), { status: 201 });
+    }
+    if (resource === "office-gallery") {
+      const data = officeGalleryInputSchema.parse(raw);
+      const mediaIds = data.media.map((file) => file.id);
+      const mediaRows = mediaIds.length
+        ? await prisma.media.findMany({
+            where: { id: { in: mediaIds } },
+            select: { id: true, mimeType: true },
+          })
+        : [];
+      if (new Set(mediaIds).size !== mediaIds.length || mediaRows.length !== mediaIds.length) {
+        return NextResponse.json({ error: "One or more selected images are unavailable or duplicated." }, { status: 400 });
+      }
+      if (mediaRows.some((file) => !file.mimeType.startsWith("image/"))) {
+        return NextResponse.json({ error: "Office gallery entries can contain images only." }, { status: 400 });
+      }
+      const saved = await prisma.$transaction(async (tx) => {
+        const record = await tx.officeGallery.create({
+          data: {
+            branch: data.branch,
+            area: data.area,
+            status: data.status,
+            media: {
+              create: data.media.map((file, order) => ({
+                order,
+                media: { connect: { id: file.id } },
+              })),
+            },
+          },
+        });
+        for (const file of data.media) {
+          await tx.media.update({
+            where: { id: file.id },
+            data: { altText: file.altText },
+          });
+        }
+        return tx.officeGallery.findUnique({
+          where: { id: record.id },
+          include: { media: { include: { media: true }, orderBy: { order: "asc" } } },
+        });
+      });
+      return NextResponse.json(saved, { status: 201 });
     }
     if (resource === "courses") {
       const data = courseInputSchema.parse(raw); const university = await prisma.university.findUnique({ where: { id: data.universityId }, select: { id: true } });

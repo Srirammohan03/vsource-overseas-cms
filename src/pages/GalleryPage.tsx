@@ -8,29 +8,74 @@ import { Gallery } from "@/types/Gallery";
 import { toast } from "sonner";
 import BannerSkeleton from "@/Loaders/about-us/BannerSkeleton";
 import { mediaUrl } from "@/lib/media-url";
+import { Coffee, Users, FileCheck } from "lucide-react";
+import {
+  officeAreas,
+  officeBranches,
+  type OfficeArea,
+  type OfficeBranch,
+  type PublicOfficeGalleryRecord,
+} from "@/features/cms/types/office-gallery";
 
 export const fetchGallery = async () => {
   const { data } = await axios.get("/api/public/gallery");
   const supportedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
   const seen = new Set<string>();
   const photos = (Array.isArray(data) ? data : []).flatMap((item: any) => {
-    const category = typeof item?.category?.slug === "string" ? item.category.slug.toLowerCase() : "";
+    const category =
+      typeof item?.category?.slug === "string"
+        ? item.category.slug.toLowerCase()
+        : "";
     if (category === "students" || category === "student-success") return [];
     const media = Array.isArray(item?.media) ? item.media : [];
     return media.flatMap((galleryMedia: any) => {
       const asset = galleryMedia?.media;
       const url = typeof asset?.url === "string" ? asset.url.trim() : "";
-      const mimeType = typeof asset?.mimeType === "string" ? asset.mimeType.toLowerCase() : "";
+      const mimeType =
+        typeof asset?.mimeType === "string" ? asset.mimeType.toLowerCase() : "";
       if (!url || !supportedTypes.has(mimeType) || seen.has(url)) return [];
       seen.add(url);
-      return [{ id: url, url, mimeType, category: "photos", name: asset?.altText || item?.title || "Gallery Photo", alternativeText: asset?.altText || "" }];
+      return [
+        {
+          id: url,
+          url,
+          mimeType,
+          category: "photos",
+          name: asset?.altText || item?.title || "Gallery Photo",
+          alternativeText: asset?.altText || "",
+        },
+      ];
     });
   });
-  return { title: "Our Visual Journey", subheading: "Explore our offices, photos, and student success moments through our visual gallery", blocks: [{ id: 0, __component: "gallery.journey-images", journey_images: photos }] };
+  return {
+    title: "Our Visual Journey",
+    subheading:
+      "Explore our offices, photos, and student success moments through our visual gallery",
+    blocks: [
+      { id: 0, __component: "gallery.journey-images", journey_images: photos },
+    ],
+  };
 };
 
+const fetchOfficeGallery = async (branch: OfficeBranch, area: OfficeArea) => {
+  const { data } = await axios.get<PublicOfficeGalleryRecord[]>(
+    "/api/public/office-gallery",
+    { params: { branch, area } },
+  );
+  return data;
+};
+
+const officeAreaIcons = {
+  COUNSELING_AREA: Users,
+  APPLICATION_PROCESSING_UK: FileCheck,
+  CAFETERIA: Coffee,
+} satisfies Record<OfficeArea, typeof Users>;
+
 const GalleryPage = () => {
-  const [activeTab, setActiveTab] = useState<"all" | "photos" | "students">("all");
+  const [activeTab, setActiveTab] = useState("all");
+  const [activeBranch, setActiveBranch] =
+    useState<OfficeBranch>("DILSUKNAGAR");
+  const [activeArea, setActiveArea] = useState<OfficeArea>("COUNSELING_AREA");
 
   const {
     data: gallery,
@@ -40,6 +85,17 @@ const GalleryPage = () => {
   } = useQuery<Gallery>({
     queryKey: ["gallery"],
     queryFn: fetchGallery,
+    staleTime: 10 * 60 * 1000,
+  });
+  const {
+    data: officeGallery = [],
+    isLoading: isOfficeLoading,
+    isError: isOfficeError,
+    refetch: refetchOfficeGallery,
+  } = useQuery<PublicOfficeGalleryRecord[]>({
+    queryKey: ["office-gallery", activeBranch, activeArea],
+    queryFn: () => fetchOfficeGallery(activeBranch, activeArea),
+    enabled: activeTab === "office",
     staleTime: 10 * 60 * 1000,
   });
 
@@ -58,7 +114,7 @@ const GalleryPage = () => {
   }
 
   const journeyBlock = gallery?.blocks?.find(
-    (block) => block?.__component === "gallery.journey-images"
+    (block) => block?.__component === "gallery.journey-images",
   );
 
   const journeyImages = journeyBlock?.journey_images || [];
@@ -66,8 +122,13 @@ const GalleryPage = () => {
     { id: "all", label: "All" },
     { id: "photos", label: "Photos" },
     { id: "students", label: "Student Success" },
+    { id: "office", label: "Our Office" },
   ] as const;
-  const visibleImages = activeTab === "all" || activeTab === "photos" ? journeyImages : [];
+  const visibleImages =
+    activeTab === "all" || activeTab === "photos" ? journeyImages : [];
+
+  const selectedArea = officeAreas.find((area) => area.value === activeArea);
+  const selectedImages = officeGallery[0]?.images || [];
 
   return (
     <>
@@ -88,21 +149,27 @@ const GalleryPage = () => {
       <section className="py-16 md:py-16">
         <div className="container mx-auto px-4">
           {/* Tabs */}
-          <div className="flex justify-center mb-12">
-            <div className="inline-flex bg-gray-100 rounded-lg p-1">
-              {galleryTabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                    activeTab === tab.id
-                      ? "bg-white shadow-sm text-primary"
-                      : "text-gray-600 hover:text-gray-900"
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
+          <div className="w-full mb-12 overflow-x-auto overflow-y-hidden">
+            <div className="flex w-max min-w-full justify-start sm:justify-center">
+              <div className="inline-flex w-max bg-gray-100 rounded-xl p-1.5 gap-1">
+                {["all", "photos", "students", "office"].map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`shrink-0 whitespace-nowrap px-5 py-3 rounded-lg text-sm font-semibold transition-all duration-300 ${
+                      activeTab === tab
+                        ? "bg-white shadow-md text-primary"
+                        : "text-gray-600 hover:text-gray-900"
+                    }`}
+                  >
+                    {tab === "students"
+                      ? "Student Success"
+                      : tab === "office"
+                        ? "Our Office"
+                        : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -112,17 +179,121 @@ const GalleryPage = () => {
           )}
 
           {/* Regular Gallery Grid — hide when a location tab is active */}
-          {activeTab !== "students" && visibleImages.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {visibleImages.map((item, index) => (
-                <AnimateOnScroll key={item?.id || index} delay={index * 100}>
-                  <div className="bg-white rounded-lg overflow-hidden shadow-md group relative">
-                    <div className="relative h-64 overflow-hidden">
-                      <img src={mediaUrl(item?.url)} alt={item?.name || "Gallery Photo"} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" loading="lazy" decoding="async" />
+          {activeTab !== "students" &&
+            activeTab !== "office" &&
+            journeyImages.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {visibleImages.map((item, index) => (
+                  <AnimateOnScroll key={item?.id || index} delay={index * 100}>
+                    <div className="bg-white rounded-lg overflow-hidden shadow-md group relative">
+                      <div className="relative h-64 overflow-hidden">
+                        <img
+                          src={mediaUrl(item?.url)}
+                          alt={item?.name || "Gallery Photo"}
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      </div>
                     </div>
-                  </div>
-                </AnimateOnScroll>
-              ))}
+                  </AnimateOnScroll>
+                ))}
+              </div>
+            )}
+
+          {/* OUR OFFICE SECTION */}
+          {activeTab === "office" && (
+            <div className="max-w-7xl mx-auto">
+              {/* Branch Tabs */}
+              <div className="flex justify-center mb-8">
+                <div className="flex flex-wrap justify-center gap-3">
+                  {officeBranches.map((branch) => (
+                    <button
+                      key={branch.value}
+                      onClick={() => {
+                        setActiveBranch(branch.value);
+                        setActiveArea(officeAreas[0].value);
+                      }}
+                      className={`px-6 py-3 rounded-xl text-sm md:text-base font-semibold transition-all duration-300 border ${
+                        activeBranch === branch.value
+                          ? "bg-primary text-white border-primary shadow-lg shadow-blue-900/15"
+                          : "bg-white text-gray-600 border-gray-200 hover:border-primary hover:text-primary"
+                      }`}
+                    >
+                      {branch.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Branch Area Tabs */}
+              <div className="flex justify-center mb-10">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-4xl">
+                  {officeAreas.map((area) => {
+                    const Icon = officeAreaIcons[area.value];
+
+                    return (
+                      <button
+                        key={area.value}
+                        onClick={() => setActiveArea(area.value)}
+                        className={`flex items-center justify-center gap-2 px-4 py-4 rounded-xl border transition-all duration-300 text-sm font-semibold ${
+                          activeArea === area.value
+                            ? "bg-blue-50 border-primary text-primary shadow-sm"
+                            : "bg-white border-gray-200 text-gray-600 hover:border-blue-300 hover:bg-gray-50"
+                        }`}
+                      >
+                        <Icon size={19} />
+                        <span>{area.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Selected Branch / Area Gallery */}
+
+              {isOfficeLoading ? (
+                <p className="rounded-xl bg-gray-50 px-5 py-8 text-center text-sm text-gray-500">
+                  Loading office photos…
+                </p>
+              ) : isOfficeError ? (
+                <div
+                  role="alert"
+                  className="rounded-xl bg-red-50 px-5 py-8 text-center text-sm text-red-700"
+                >
+                  <p>Office photos could not be loaded.</p>
+                  <button
+                    type="button"
+                    onClick={() => void refetchOfficeGallery()}
+                    className="mt-3 rounded-lg border border-red-200 px-4 py-2 font-semibold hover:bg-white"
+                  >
+                    Try again
+                  </button>
+                </div>
+              ) : selectedImages.length ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {selectedImages.map((image, index) => (
+                    <AnimateOnScroll key={image.id} delay={index * 80}>
+                      <div className="relative h-64 md:h-72 rounded-2xl overflow-hidden bg-gray-100 shadow-md group">
+                        <img
+                          src={mediaUrl(image.url)}
+                          alt={
+                            image.altText ||
+                            `${selectedArea?.label || "Office"} photo ${index + 1}`
+                          }
+                          loading="lazy"
+                          decoding="async"
+                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                        />
+                      </div>
+                    </AnimateOnScroll>
+                  ))}
+                </div>
+              ) : (
+                <p className="rounded-xl bg-gray-50 px-5 py-8 text-center text-sm text-gray-500">
+                  No published photos are available for this office area yet.
+                </p>
+              )}
             </div>
           )}
         </div>

@@ -2,7 +2,7 @@ import { Description, Image } from "@/types/LandingPage";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import axios from "axios";
 
-export const COUNTRIES = ["USA", "UK", "Canada", "Ireland", "France"] as const;
+export const COUNTRIES = ["USA", "UK", "Canada"] as const;
 export type Country = (typeof COUNTRIES)[number];
 
 export interface University {
@@ -101,15 +101,61 @@ export interface Tab {
 }
 
 export const fetchExploreUniversities = async (page = 1, country = "All") => {
-  const response = await axios.get(`/api/public/universities?page=${page}&country=${encodeURIComponent(country)}`);
+  const response = await axios.get(
+    `/api/public/universities?page=${page}&country=${encodeURIComponent(country)}`,
+  );
   const data = response.data;
-  return { ...data, universities: (data.universities || []).map((item: any) => ({ ...item.content, ...item, logo: item.logo || item.content?.logo, banner: item.banner || item.content?.banner, id: item.id, country: item.country?.name || "" })) };
+  return {
+    ...data,
+    universities: (data.universities || []).map((item: any) => ({
+      ...item.content,
+      ...item,
+      logo: item.logo || item.content?.logo,
+      banner: item.banner || item.content?.banner,
+      id: item.id,
+      country: item.country?.name || "",
+    })),
+  };
 };
 
 export const fetchUniversityBySlug = async (slug: string) => {
-  const { data } = await axios.get(`/api/public/universities?slug=${encodeURIComponent(slug)}`);
-  const courses = (data.courses || data.content?.courses?.famous_courses || []).map((course: any) => ({ ...course, name: course.name, annual_fee: course.annualFee ?? course.annual_fee ?? "", duration: course.duration || "", degree_level: course.degreeLevel || "", currency: course.currency || "", intakes: course.intakes || [], eligibility: course.eligibility || "", description: course.description || "" }));
-  return { ...data.content, ...data, logo: data.logo || data.content?.logo, banner: data.banner || data.content?.banner, id: data.id, country: data.country?.name || "", courses: { famous_courses: courses }, gallerys: data.gallerys || data.gallery?.map((image: any) => ({ id: image.id, url: image.media?.url || image.url, alternativeText: image.altText, name: image.media?.name || image.altText })) || data.content?.gallerys || [] };
+  const { data } = await axios.get(
+    `/api/public/universities?slug=${encodeURIComponent(slug)}`,
+  );
+  const courses = (
+    data.courses ||
+    data.content?.courses?.famous_courses ||
+    []
+  ).map((course: any) => ({
+    ...course,
+    name: course.name,
+    annual_fee: course.annualFee ?? course.annual_fee ?? "",
+    duration: course.duration || "",
+    degree_level: course.degreeLevel || "",
+    currency: course.currency || "",
+    intakes: course.intakes || [],
+    eligibility: course.eligibility || "",
+    description: course.description || "",
+  }));
+  return {
+    ...data.content,
+    ...data,
+    logo: data.logo || data.content?.logo,
+    banner: data.banner || data.content?.banner,
+    id: data.id,
+    country: data.country?.name || "",
+    courses: { famous_courses: courses },
+    gallerys:
+      data.gallerys ||
+      data.gallery?.map((image: any) => ({
+        id: image.id,
+        url: image.media?.url || image.url,
+        alternativeText: image.altText,
+        name: image.media?.name || image.altText,
+      })) ||
+      data.content?.gallerys ||
+      [],
+  };
 };
 
 export const TABS: Tab[] = [
@@ -125,7 +171,7 @@ export const TABS: Tab[] = [
   { key: "faq", label: "FAQs" },
 ];
 
-type ExploreUniversitiesResponse = {
+export type ExploreUniversitiesResponse = {
   universities: University[];
   pagination: {
     page: number;
