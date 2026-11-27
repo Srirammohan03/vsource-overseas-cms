@@ -49,7 +49,7 @@ ADMIN_EMAIL="admin@example.com" ADMIN_PASSWORD="use-a-unique-password-of-at-leas
 
 ## CMS modules
 
-The admin dashboard provides Dashboard, Study Destinations, Universities, University Courses, Gallery, Media Library, Admin Users and Settings. Editors use structured controls and repeatable fields; flexible content is serialized into Prisma JSON internally. Destination and university SEO metadata is editable alongside its page content. Public destination, university, course and gallery queries expose published records only.
+The admin dashboard provides Dashboard, Study Destinations, Universities, University Courses, Gallery, Media Library, Admin Users and Settings. The Gallery module has separate Gallery and Our Office tabs; office photos are managed by branch and area, use the existing gallery Media Library uploader, and expose published records only. Editors use structured controls and repeatable fields; flexible content is serialized into Prisma JSON internally. Destination and university SEO metadata is editable alongside its page content. Public destination, university, course, gallery and office-gallery queries expose published records only.
 
 ## Production / VPS
 

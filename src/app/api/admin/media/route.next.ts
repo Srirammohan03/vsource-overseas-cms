@@ -13,14 +13,15 @@ const referencesPath = (value: unknown, target: string): boolean => {
   return false;
 };
 async function hasPublishedReference(url: string, mediaId: string) {
-  const [gallery, university, destinationPages, destinationSections, universitySections] = await Promise.all([
+  const [gallery, university, offices, destinationPages, destinationSections, universitySections] = await Promise.all([
     prisma.galleryMedia.count({ where: { mediaId, gallery: { status: "PUBLISHED" } } }),
     prisma.universityGallery.count({ where: { mediaId, university: { status: "PUBLISHED" } } }),
+    prisma.officeGalleryMedia.count({ where: { mediaId, officeGallery: { status: "PUBLISHED" } } }),
     prisma.destinationPage.findMany({ select: { content: true } }),
     prisma.destinationSection.findMany({ select: { content: true } }),
     prisma.universityPageSection.findMany({ select: { content: true } }),
   ]);
-  if (gallery || university) return true;
+  if (gallery || university || offices) return true;
   const [universities,] = await Promise.all([prisma.university.findMany({ select: { content: true, logo: true, banner: true } })]);
   return [...destinationPages, ...destinationSections, ...universitySections, ...universities].some(record => Object.values(record).some(value => referencesPath(value, url)));
 }
@@ -116,9 +117,9 @@ export async function DELETE(request: Request) {
   const access = await requireApiRole("ADMIN"); if (access.response) return access.response;
   const parsed = z.object({ id: z.string().min(1) }).safeParse(await request.json());
   if (!parsed.success) return NextResponse.json({ error: "A media id is required." }, { status: 400 });
-  const media = await prisma.media.findUnique({ where: { id: parsed.data.id }, include: { galleryItems: true, universityImages: true } });
+  const media = await prisma.media.findUnique({ where: { id: parsed.data.id }, include: { galleryItems: true, universityImages: true, officeGalleryItems: true } });
   if (!media) return NextResponse.json({ error: "Media not found." }, { status: 404 });
-  const referencedByDraft = media.galleryItems.length > 0 || media.universityImages.length > 0;
+  const referencedByDraft = media.galleryItems.length > 0 || media.universityImages.length > 0 || media.officeGalleryItems.length > 0;
   if (referencedByDraft || await hasPublishedReference(media.url, media.id)) return NextResponse.json({ error: "This file is still referenced by published or draft content. Remove it from that content first." }, { status: 409 });
   await prisma.media.delete({ where: { id: media.id } });
   try { await deleteLocalMediaFiles([media.url, media.thumbnailPath]); }

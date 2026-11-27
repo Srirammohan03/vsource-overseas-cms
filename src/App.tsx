@@ -20,6 +20,8 @@ import TermsAndConditions from "./components/ireland/TermsAndConditions";
 import ChatBot from "./services/ChatBot";
 import { Phone } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
+import ListOfUkUniversities from "./pages/ListOfUkUniversities";
+import SuccessStories from "./pages/SuccessStories";
 
 const HomePage = lazy(() => import("./pages/HomePage"));
 const AboutPage = lazy(() => import("./pages/AboutPage"));
@@ -48,8 +50,7 @@ const FloatingContactButtons = () => {
   const phoneNumber = "+919121711119";
 
   return (
-    <div className="fixed right-4 bottom-6 md:right-6 md:bottom-8 z-[9999] flex flex-col gap-3">
-
+    <div className="fixed right-4 bottom-[30%] md:right-6 md:bottom-[30%] z-[9999] flex flex-col gap-16">
       {/* Call Now */}
       <a
         href={`tel:${phoneNumber}`}
@@ -81,13 +82,23 @@ const FloatingContactButtons = () => {
           <FaWhatsapp className="text-white w-6 h-6 md:w-7 md:h-7" />
         </div>
       </a>
-
     </div>
   );
 };
 
 const App = () => {
-  const [queryClient] = useState(() => new QueryClient({ defaultOptions: { queries: { refetchOnWindowFocus: false, refetchInterval: false, retry: false } } }));
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            refetchOnWindowFocus: false,
+            refetchInterval: false,
+            retry: false,
+          },
+        },
+      }),
+  );
   const faqRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
   const [showForm, setShowForm] = useState(false);
@@ -129,7 +140,7 @@ const App = () => {
         <div className="flex flex-col min-h-screen">
           {!shouldHideLayout && <Navbar />}
 
-      <main className="flex-grow">
+          <main className="flex-grow">
             <Suspense fallback={<AppSkeleton />}>
               <Routes>
                 {/* <Route path="/" element={<MaintenancePage />} /> */}
@@ -141,6 +152,12 @@ const App = () => {
                 <Route path="/study-in-canada" element={<StudyCanada />} />
                 <Route path="/study-in-ireland" element={<StudyIreland />} />
                 <Route path="/study-in-france" element={<StudyFrance />} />
+                <Route path="/success-stories" element={<SuccessStories />} />
+
+                <Route
+                  path="/uk-universities"
+                  element={<ListOfUkUniversities />}
+                />
 
                 <Route
                   path="/explore-universities"
@@ -172,7 +189,7 @@ const App = () => {
           {/* {!shouldHideLayout && <ContactBar />}  */}
           {!shouldHideLayout && <Footer />}
         </div>
-{/* 
+        {/* 
         <Suspense fallback={null}>
           {!shouldHideLayout && (
             <ChatBot
@@ -185,7 +202,7 @@ const App = () => {
 
         {/* Floating Buttons */}
         {/* Floating Call & WhatsApp Buttons */}
-{!shouldHideLayout && <FloatingContactButtons />}
+        {!shouldHideLayout && <FloatingContactButtons />}
         {/* {!shouldHideLayout && (
           <ScrollToTopButton
             showFormIcon={showFormIcon}

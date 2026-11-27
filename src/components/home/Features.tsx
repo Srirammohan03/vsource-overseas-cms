@@ -62,11 +62,11 @@ const features: Feature[] = [
     bgColor: GREY,
     title: "Quick & Easy Application Process",
   },
-  {
-    icon: "/icons/home-icon-silhouette.png",
-    bgColor: GREY,
-    title: "Income tax benefits under section 80E",
-  },
+  // {
+  //   icon: "/icons/home-icon-silhouette.png",
+  //   bgColor: GREY,
+  //   title: "Income tax benefits under section 80E",
+  // },
 ];
 
 const FinancialAssistance: React.FC = () => {
@@ -159,7 +159,7 @@ const FinancialAssistance: React.FC = () => {
           data-aos="fade-up"
           data-aos-duration="700"
         >
-          <a href="https://demofintech.vsource.online/" target="_blank">
+          <a href="https://www.vsourcefintech.com/" target="_blank">
             <button
               className="btn primary"
               data-aos="zoom-in-right"
@@ -170,7 +170,7 @@ const FinancialAssistance: React.FC = () => {
             </button>
           </a>
 
-          <a href="https://demofintech.vsource.online/contact" target="_blank">
+          <a href="https://www.vsourcefintech.com/contact" target="_blank">
             <button
               className="btn secondary"
               data-aos="zoom-in-left"

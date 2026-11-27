@@ -94,12 +94,13 @@ const StudyUSA = () => {
       <PopularCourses items={studyInUsa?.popularCourses?.items} heading={studyInUsa?.popularCourses?.title} />
 
       {/* Anchor: Jobs */}
-      <section id="jobs" className="anchor-section">
+      {/* <section id="jobs" className="anchor-section">
         <JobsInUSA
           students_expriences={studyInUsa?.students_expriences || null}
           jobsAndOpportunities={studyInUsa?.jobsAndOpportunities}
         />
-      </section>
+      </section> */}
+      
 
       <VideoCarousel items={studyInUsa?.videos} />
 

@@ -25,9 +25,23 @@ import {
   TextField,
 } from "@/features/cms/components/Fields";
 import { MediaAsset } from "@/features/cms/types";
+import {
+  officeAreas,
+  officeBranches,
+  type OfficeArea,
+  type OfficeBranch,
+  type OfficeGalleryRecord,
+} from "@/features/cms/types/office-gallery";
 
 type Module = AdminModule;
 type Row = Record<string, any>;
+type OfficeGalleryForm = {
+  id: string;
+  branch: OfficeBranch;
+  area: OfficeArea;
+  media: MediaAsset[];
+  status: "DRAFT" | "PUBLISHED";
+};
 const emptyCourse = {
   id: "",
   name: "",
@@ -52,6 +66,30 @@ const emptyGallery = {
   status: "DRAFT",
   order: 0,
 };
+const emptyOfficeGallery: OfficeGalleryForm = {
+  id: "",
+  branch: "DILSUKNAGAR",
+  area: "COUNSELING_AREA",
+  media: [],
+  status: "DRAFT",
+};
+const gallerySections = [
+  { id: "gallery", label: "Gallery" },
+  { id: "office", label: "Our Office" },
+] as const;
+function officeGalleryFormFromRecord(
+  record: OfficeGalleryRecord,
+): OfficeGalleryForm {
+  return {
+    id: record.id,
+    branch: record.branch,
+    area: record.area,
+    status: record.status,
+    media: record.media.flatMap(({ media, mediaId }) =>
+      media ? [{ ...media, id: mediaId }] : [],
+    ),
+  };
+}
 const countries = ["UK", "USA", "Canada", "Ireland", "France"];
 const input =
   "w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm";
@@ -310,7 +348,11 @@ export default function AdminDashboard({
   initialModule?: Module;
 }) {
   const [module, setModule] = useState<Module>(initialModule),
+    [gallerySection, setGallerySection] = useState<"gallery" | "office">("gallery"),
     [items, setItems] = useState<Row[]>([]),
+    [officeItems, setOfficeItems] = useState<OfficeGalleryRecord[]>([]),
+    [officeLoading, setOfficeLoading] = useState(false),
+    [officeError, setOfficeError] = useState(""),
     [media, setMedia] = useState<Row[]>([]),
     [universities, setUniversities] = useState<Row[]>([]),
     [loading, setLoading] = useState(false),
@@ -323,6 +365,8 @@ export default function AdminDashboard({
     [university, setUniversity] = useState<UniversityForm>(blankUniversity),
     [course, setCourse] = useState<Row>(emptyCourse),
     [gallery, setGallery] = useState<any>(emptyGallery),
+    [officeGallery, setOfficeGallery] =
+      useState<OfficeGalleryForm>(emptyOfficeGallery),
     [user, setUser] = useState<Row>({
       id: "",
       name: "",
@@ -373,11 +417,30 @@ export default function AdminDashboard({
   useEffect(() => {
     void load();
   }, [load]);
+  const loadOfficeGallery = useCallback(async () => {
+    if (module !== "gallery") return;
+    setOfficeLoading(true);
+    setOfficeError("");
+    try {
+      const response = await fetch("/api/admin/office-gallery");
+      const data = await response.json();
+      if (!response.ok) throw Error(data.error || "Could not load office photos.");
+      setOfficeItems(Array.isArray(data) ? data : []);
+    } catch (loadError) {
+      setOfficeError((loadError as Error).message);
+    } finally {
+      setOfficeLoading(false);
+    }
+  }, [module]);
+  useEffect(() => {
+    void loadOfficeGallery();
+  }, [loadOfficeGallery]);
   const reset = () => {
     setDestination(emptyDestination());
     setUniversity(blankUniversity());
     setCourse(emptyCourse);
     setGallery(emptyGallery);
+    setOfficeGallery(emptyOfficeGallery);
     setUser({
       id: "",
       name: "",
@@ -389,6 +452,18 @@ export default function AdminDashboard({
     setError("");
     setNotice("");
   };
+  function selectOfficeLocation(branch: OfficeBranch, area: OfficeArea) {
+    const record = officeItems.find(
+      (item) => item.branch === branch && item.area === area,
+    );
+    setOfficeGallery(
+      record
+        ? officeGalleryFormFromRecord(record)
+        : { ...emptyOfficeGallery, branch, area },
+    );
+    setError("");
+    setNotice("");
+  }
   function edit(item: Row) {
     setError("");
     setNotice("");
@@ -551,6 +626,64 @@ export default function AdminDashboard({
       setNotice("Record deleted.");
       if (item.id === destination.id || item.id === university.id) reset();
       void load();
+    }
+  }
+  async function saveOfficeGallery(event: React.FormEvent) {
+    event.preventDefault();
+    setBusy(true);
+    setOfficeError("");
+    setNotice("");
+    try {
+      const response = await fetch(
+        officeGallery.id
+          ? `/api/admin/office-gallery/${encodeURIComponent(officeGallery.id)}`
+          : "/api/admin/office-gallery",
+        {
+          method: officeGallery.id ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            branch: officeGallery.branch,
+            area: officeGallery.area,
+            status: officeGallery.status,
+            media: officeGallery.media.map((asset) => ({
+              id: asset.id,
+              altText: asset.altText || "",
+            })),
+          }),
+        },
+      );
+      const data = await response.json();
+      if (!response.ok) throw Error(data.error || "Office gallery could not be saved.");
+      setOfficeGallery(officeGalleryFormFromRecord(data as OfficeGalleryRecord));
+      setNotice("Office photos saved.");
+      await loadOfficeGallery();
+    } catch (saveError) {
+      setOfficeError((saveError as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function removeOfficeGallery(record: OfficeGalleryRecord) {
+    if (!confirm("Delete this office area record? This cannot be undone.")) return;
+    setOfficeError("");
+    try {
+      const response = await fetch(
+        `/api/admin/office-gallery/${encodeURIComponent(record.id)}`,
+        { method: "DELETE" },
+      );
+      const data = await response.json();
+      if (!response.ok) throw Error(data.error || "Office photos could not be deleted.");
+      if (officeGallery.id === record.id) {
+        setOfficeGallery({
+          ...emptyOfficeGallery,
+          branch: record.branch,
+          area: record.area,
+        });
+      }
+      setNotice("Office area record deleted.");
+      await loadOfficeGallery();
+    } catch (deleteError) {
+      setOfficeError((deleteError as Error).message);
     }
   }
   const visible = useMemo(
@@ -802,77 +935,270 @@ export default function AdminDashboard({
         )}
         {module === "gallery" && (
           <>
-            <form
-              onSubmit={save}
-              className="grid min-w-0 grid-cols-1 gap-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6 md:grid-cols-2"
+            <div
+              role="tablist"
+              aria-label="Gallery management sections"
+              className="flex w-fit gap-1 rounded-xl bg-white p-1 shadow-sm"
             >
-              <h2 className="md:col-span-2 text-lg font-semibold">
-                {gallery.id ? "Edit gallery item" : "Add gallery item"}
-              </h2>
-              <TextField
-                label="Title"
-                required
-                value={gallery.title}
-                onChange={(v) => setGallery({ ...gallery, title: v })}
-              />
-              <TextField
-                label="Slug"
-                required
-                value={gallery.slug}
-                onChange={(v) => setGallery({ ...gallery, slug: v })}
-              />
-              <TextField
-                label="Category"
-                value={gallery.category}
-                onChange={(v) => setGallery({ ...gallery, category: v })}
-              />
-              <SelectField
-                label="Publication"
-                value={gallery.status}
-                onChange={(v) => setGallery({ ...gallery, status: v })}
-                options={[
-                  { value: "DRAFT", label: "Draft" },
-                  { value: "PUBLISHED", label: "Published" },
-                ]}
-              />
-              <div className="md:col-span-2">
-                <TextAreaField
-                  label="Description"
-                  value={gallery.description}
-                  onChange={(v) => setGallery({ ...gallery, description: v })}
-                />
-              </div>
-              <div className="md:col-span-2">
-                <MediaPicker
-                  label="Gallery images"
-                  folder="gallery"
-                  multiple
-                  value={gallery.media}
-                  onChange={(v) => setGallery({ ...gallery, media: v })}
-                />
-              </div>
-              <div className="flex items-end gap-2">
+              {gallerySections.map((tab) => (
                 <button
-                  className="rounded bg-red-700 px-4 py-2 font-semibold text-white"
-                  disabled={busy}
-                >
-                  {busy ? "Saving…" : "Save gallery item"}
-                </button>
-                <button
+                  key={tab.id}
                   type="button"
-                  onClick={reset}
-                  className="rounded border px-4 py-2"
+                  role="tab"
+                  aria-selected={gallerySection === tab.id}
+                  onClick={() => setGallerySection(tab.id)}
+                  className={`rounded-lg px-4 py-2.5 text-sm font-semibold transition ${
+                    gallerySection === tab.id
+                      ? "bg-[#C71920] text-white"
+                      : "text-slate-600 hover:bg-slate-100"
+                  }`}
                 >
-                  New
+                  {tab.label}
                 </button>
-              </div>
-            </form>
-            <RecordList
-              rows={visible}
-              loading={loading}
-              onEdit={edit}
-              onDelete={remove}
-            />
+              ))}
+            </div>
+            {gallerySection === "gallery" && (
+              <>
+                <form
+                  onSubmit={save}
+                  className="grid min-w-0 grid-cols-1 gap-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6 md:grid-cols-2"
+                >
+                  <h2 className="md:col-span-2 text-lg font-semibold">
+                    {gallery.id ? "Edit gallery item" : "Add gallery item"}
+                  </h2>
+                  <TextField
+                    label="Title"
+                    required
+                    value={gallery.title}
+                    onChange={(v) => setGallery({ ...gallery, title: v })}
+                  />
+                  <TextField
+                    label="Slug"
+                    required
+                    value={gallery.slug}
+                    onChange={(v) => setGallery({ ...gallery, slug: v })}
+                  />
+                  <TextField
+                    label="Category"
+                    value={gallery.category}
+                    onChange={(v) => setGallery({ ...gallery, category: v })}
+                  />
+                  <SelectField
+                    label="Publication"
+                    value={gallery.status}
+                    onChange={(v) => setGallery({ ...gallery, status: v })}
+                    options={[
+                      { value: "DRAFT", label: "Draft" },
+                      { value: "PUBLISHED", label: "Published" },
+                    ]}
+                  />
+                  <div className="md:col-span-2">
+                    <TextAreaField
+                      label="Description"
+                      value={gallery.description}
+                      onChange={(v) => setGallery({ ...gallery, description: v })}
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <MediaPicker
+                      label="Gallery images"
+                      folder="gallery"
+                      multiple
+                      value={gallery.media}
+                      onChange={(v) => setGallery({ ...gallery, media: v })}
+                    />
+                  </div>
+                  <div className="flex items-end gap-2">
+                    <button
+                      className="rounded bg-red-700 px-4 py-2 font-semibold text-white"
+                      disabled={busy}
+                    >
+                      {busy ? "Saving…" : "Save gallery item"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={reset}
+                      className="rounded border px-4 py-2"
+                    >
+                      New
+                    </button>
+                  </div>
+                </form>
+                <RecordList
+                  rows={visible}
+                  loading={loading}
+                  onEdit={edit}
+                  onDelete={remove}
+                />
+              </>
+            )}
+            {gallerySection === "office" && (
+              <>
+                {officeError && <Notice>{officeError}</Notice>}
+                <form
+                  onSubmit={saveOfficeGallery}
+                  className="grid min-w-0 grid-cols-1 gap-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6 md:grid-cols-2"
+                >
+                  <div className="md:col-span-2">
+                    <h2 className="text-lg font-semibold">
+                      {officeGallery.id ? "Edit office photos" : "Add office photos"}
+                    </h2>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Choose a branch and area, then upload or remove images. Existing photos are loaded for the selected location.
+                    </p>
+                  </div>
+                  <SelectField
+                    label="Branch"
+                    value={officeGallery.branch}
+                    onChange={(value) =>
+                      selectOfficeLocation(value as OfficeBranch, officeGallery.area)
+                    }
+                    options={officeBranches}
+                    disabled={officeLoading || Boolean(officeError)}
+                  />
+                  <SelectField
+                    label="Office area"
+                    value={officeGallery.area}
+                    onChange={(value) =>
+                      selectOfficeLocation(officeGallery.branch, value as OfficeArea)
+                    }
+                    options={officeAreas}
+                    disabled={officeLoading || Boolean(officeError)}
+                  />
+                  <SelectField
+                    label="Publication"
+                    value={officeGallery.status}
+                    onChange={(value) =>
+                      setOfficeGallery({
+                        ...officeGallery,
+                        status: value as OfficeGalleryForm["status"],
+                      })
+                    }
+                    options={[
+                      { value: "DRAFT", label: "Draft" },
+                      { value: "PUBLISHED", label: "Published" },
+                    ]}
+                  />
+                  <div className="md:col-span-2">
+                    <MediaPicker
+                      label="Office gallery images"
+                      folder="gallery"
+                      multiple
+                      value={officeGallery.media}
+                      onChange={(value) =>
+                        setOfficeGallery({ ...officeGallery, media: value })
+                      }
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <button
+                      className="rounded bg-red-700 px-4 py-2 font-semibold text-white disabled:opacity-60"
+                      disabled={busy || officeLoading || Boolean(officeError)}
+                    >
+                      {busy
+                        ? "Saving…"
+                        : officeGallery.status === "PUBLISHED"
+                          ? "Save & publish"
+                          : "Save draft"}
+                    </button>
+                  </div>
+                </form>
+                <section className="grid gap-5">
+                  <div>
+                    <h2 className="text-lg font-bold text-slate-900">
+                      Office photos by branch and area
+                    </h2>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Edit the saved images for any location or delete its record.
+                    </p>
+                  </div>
+                  {officeLoading ? (
+                    <p className="rounded-xl bg-white p-5 text-sm text-slate-500">
+                      Loading office photos…
+                    </p>
+                  ) : officeError ? (
+                    <button
+                      type="button"
+                      onClick={() => void loadOfficeGallery()}
+                      className="w-fit rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700"
+                    >
+                      Retry loading office photos
+                    </button>
+                  ) : officeBranches.map((branch) => (
+                    <section
+                      key={branch.value}
+                      className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"
+                    >
+                      <h3 className="font-bold text-slate-900">{branch.label}</h3>
+                      <div className="grid gap-3 lg:grid-cols-3">
+                        {officeAreas.map((area) => {
+                          const record = officeItems.find(
+                            (item) =>
+                              item.branch === branch.value &&
+                              item.area === area.value,
+                          );
+                          return (
+                            <article
+                              key={area.value}
+                              className="min-w-0 rounded-xl border border-slate-200 p-3"
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div>
+                                  <h4 className="text-sm font-semibold text-slate-800">
+                                    {area.label}
+                                  </h4>
+                                  <p className="mt-1 text-xs text-slate-500">
+                                    {record
+                                      ? `${record.media.length} image(s) · ${record.status === "PUBLISHED" ? "Published" : "Draft"}`
+                                      : "No saved images"}
+                                  </p>
+                                </div>
+                                <div className="flex shrink-0 gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      record
+                                        ? setOfficeGallery(officeGalleryFormFromRecord(record))
+                                        : selectOfficeLocation(branch.value, area.value)
+                                    }
+                                    className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                                  >
+                                    {record ? "Edit" : "Add"}
+                                  </button>
+                                  {record && (
+                                    <button
+                                      type="button"
+                                      onClick={() => void removeOfficeGallery(record)}
+                                      className="rounded-lg border border-red-200 px-2.5 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50"
+                                    >
+                                      Delete
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                              {record?.media.length ? (
+                                <div className="mt-3 grid grid-cols-3 gap-2">
+                                  {record.media.map(({ media, mediaId }) =>
+                                    media ? (
+                                      <img
+                                        key={mediaId}
+                                        src={`/media/${media.thumbnailPath || media.url}`}
+                                        alt={media.altText || ""}
+                                        className="h-16 w-full rounded-md object-cover"
+                                      />
+                                    ) : null,
+                                  )}
+                                </div>
+                              ) : null}
+                            </article>
+                          );
+                        })}
+                      </div>
+                    </section>
+                  ))}
+                </section>
+              </>
+            )}
           </>
         )}
         {module === "media" && <MediaManager onMessage={setNotice} />}

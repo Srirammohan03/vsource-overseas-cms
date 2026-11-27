@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { officeAreaValues, officeBranchValues } from "../types/office-gallery";
 
 export const statusSchema = z.enum(["DRAFT", "PUBLISHED"]);
 const slug = z.string().trim().min(1, "Slug is required.").max(180).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Use lowercase letters, numbers and hyphens.");
@@ -41,5 +42,23 @@ export const courseInputSchema = z.object({ universityId: z.string().min(1), nam
 export const coursePatchSchema = courseInputSchema.partial();
 
 export const galleryInputSchema = z.object({ slug, title: z.string().trim().min(1).max(200), description: z.string().max(5000).optional().default(""), category: z.string().max(100).optional().default(""), media: z.array(z.object({ id: z.string().min(1), altText: z.string().max(500).optional().default("") })).max(50).default([]), status: statusSchema.default("DRAFT"), order: z.number().int().min(0).default(0) }).superRefine((data, ctx) => { if (data.status === "PUBLISHED" && !data.media.length) ctx.addIssue({ code: "custom", path: ["media"], message: "Published gallery items need at least one image." }); });
+
+export const officeGalleryInputSchema = z.object({
+  branch: z.enum(officeBranchValues),
+  area: z.enum(officeAreaValues),
+  media: z.array(z.object({
+    id: z.string().min(1),
+    altText: z.string().max(500).optional().default(""),
+  })).max(50),
+  status: statusSchema.default("DRAFT"),
+}).superRefine((data, ctx) => {
+  if (data.status === "PUBLISHED" && !data.media.length) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["media"],
+      message: "Published office areas need at least one image.",
+    });
+  }
+});
 
 export const userCreateSchema = z.object({ name: z.string().trim().min(1).max(120), email: z.string().email().max(254), password: z.string().min(12).max(128).refine(value => new TextEncoder().encode(value).length <= 72), role: z.enum(["ADMIN", "EDITOR"]) });

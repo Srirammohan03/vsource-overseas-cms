@@ -8,10 +8,11 @@ type Item = {
 
 const items: Item[] = [
   { title: "UK Overview", href: "#overview" },
+  { title: "List of UK Universities", href: "/uk-universities" },
   { title: "Living Cost & Tuition Fee", href: "#costs" },
   { title: "Admission Requirement in UK", href: "#admissions" },
   { title: "Top Universities & Courses", href: "#top-universities" },
-  { title: "Job Scope in UK", href: "#jobs" },
+  // { title: "Job Scope in UK", href: "#jobs" },
 ];
 
 // Simple IntersectionObserver hook that toggles whenever item enters/leaves view
@@ -27,7 +28,7 @@ function useInView<T extends HTMLElement>(options?: IntersectionObserverInit) {
       (entries) => {
         entries.forEach((e) => setInView(e.isIntersecting));
       },
-      { root: null, threshold: 0.25, ...options }
+      { root: null, threshold: 0.25, ...options },
     );
     obs.observe(el);
     return () => obs.unobserve(el);
@@ -56,13 +57,12 @@ function getInitialTransform(dir: Dir) {
   }
 }
 
-function QuickLinksSection({ links }: { links?: Item[] }) {
-  const visibleItems = links?.length ? links : items;
+function QuickLinksSection() {
   return (
     <section className="container mx-auto px-4 md:px-6 py-10 md:py-14">
       {/* 1 per row (mobile) → 2 → 3 → 4 → 5 on xl */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-5">
-        {visibleItems.map((it, i) => {
+        {items.map((it, i) => {
           const dir = dirCycle[i % dirCycle.length];
           return <AnimatedPill key={it.title} item={it} index={i} dir={dir} />;
         })}

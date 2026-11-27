@@ -122,7 +122,7 @@ const StudyUKPage: React.FC = () => {
       <Suspense fallback={<BannerSkeleton />}>
         <HeroBanner banner={studyInUk.banner || null} title={studyInUk.title} />
 
-        <QuickLinksSection links={studyInUk?.quickLinks} />
+        <QuickLinksSection />
 
         <section id="overview" className="anchor-section">
           <OverviewHighlights overview={studyInUk.overview || null} />
@@ -148,14 +148,17 @@ const StudyUKPage: React.FC = () => {
           <LogoMarquee universities={studyInUk?.topUniversities} />
         </section>
 
-        <PopularCourses items={studyInUk?.popularCourses?.items} heading={studyInUk?.popularCourses?.title} />
+        <PopularCourses
+          items={studyInUk?.popularCourses?.items}
+          heading={studyInUk?.popularCourses?.title}
+        />
 
-        <section id="jobs" className="anchor-section">
+        {/* <section id="jobs" className="anchor-section">
           <JobsInUK
             students_expriences={studyInUk.students_expriences || null}
             jobsAndOpportunities={studyInUk?.jobsAndOpportunities}
           />
-        </section>
+        </section> */}
 
         <VideoCarousel items={studyInUk?.videos} />
       </Suspense>
