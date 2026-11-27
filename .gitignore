@@ -15,7 +15,6 @@ dist-ssr
 .next
 coverage
 *.tsbuildinfo
-/storage/uploads/
 
 
 # Editor directories and files

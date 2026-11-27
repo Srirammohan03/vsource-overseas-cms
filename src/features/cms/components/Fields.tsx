@@ -1,38 +1,415 @@
+// Vsource-frontend\src\features\cms\components\Fields.tsx
 "use client";
 
 import { useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { MediaAsset } from "../types";
 
-const inputClass = "w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-red-500 focus:ring-1 focus:ring-red-200";
-export function TextField({ label, value, onChange, type = "text", required = false, hint, error, placeholder }: { label: string; value?: string | number | null; onChange: (value: string) => void; type?: string; required?: boolean; hint?: string; error?: string; placeholder?: string }) {
-  return <label className="grid gap-1.5 text-sm font-medium text-slate-800">{label}<input className={inputClass} type={type} value={value ?? ""} onChange={e => onChange(e.target.value)} required={required} placeholder={placeholder} aria-invalid={!!error}/>{hint && <span className="text-xs font-normal text-slate-500">{hint}</span>}{error && <span role="alert" className="text-xs text-red-700">{error}</span>}</label>;
+const inputClass =
+  "w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-red-500 focus:ring-1 focus:ring-red-200";
+export function TextField({
+  label,
+  value,
+  onChange,
+  type = "text",
+  required = false,
+  hint,
+  error,
+  placeholder,
+}: {
+  label: string;
+  value?: string | number | null;
+  onChange: (value: string) => void;
+  type?: string;
+  required?: boolean;
+  hint?: string;
+  error?: string;
+  placeholder?: string;
+}) {
+  return (
+    <label className="grid gap-1.5 text-sm font-medium text-slate-800">
+      {label}
+      <input
+        className={inputClass}
+        type={type}
+        value={value ?? ""}
+        onChange={(e) => onChange(e.target.value)}
+        required={required}
+        placeholder={placeholder}
+        aria-invalid={!!error}
+      />
+      {hint && (
+        <span className="text-xs font-normal text-slate-500">{hint}</span>
+      )}
+      {error && (
+        <span role="alert" className="text-xs text-red-700">
+          {error}
+        </span>
+      )}
+    </label>
+  );
 }
-export function SelectField({ label, value, onChange, options, disabled = false }: { label: string; value: string; onChange: (value: string) => void; options: { value: string; label: string }[]; disabled?: boolean }) {
-  return <label className="grid gap-1.5 text-sm font-medium text-slate-800">{label}<select className={inputClass} value={value} onChange={e => onChange(e.target.value)} disabled={disabled}>{options.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>;
+export function SelectField({
+  label,
+  value,
+  onChange,
+  options,
+  disabled = false,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: { value: string; label: string }[];
+  disabled?: boolean;
+}) {
+  return (
+    <label className="grid gap-1.5 text-sm font-medium text-slate-800">
+      {label}
+      <select
+        className={inputClass}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
 }
-export function TextAreaField({ label, value, onChange, rows = 4, hint }: { label: string; value?: string; onChange: (value: string) => void; rows?: number; hint?: string }) {
-  return <label className="grid gap-1.5 text-sm font-medium text-slate-800">{label}<textarea className={inputClass} rows={rows} value={value || ""} onChange={e => onChange(e.target.value)}/>{hint && <span className="text-xs font-normal text-slate-500">{hint}</span>}</label>;
+export function TextAreaField({
+  label,
+  value,
+  onChange,
+  rows = 4,
+  hint,
+}: {
+  label: string;
+  value?: string;
+  onChange: (value: string) => void;
+  rows?: number;
+  hint?: string;
+}) {
+  return (
+    <label className="grid gap-1.5 text-sm font-medium text-slate-800">
+      {label}
+      <textarea
+        className={inputClass}
+        rows={rows}
+        value={value || ""}
+        onChange={(e) => onChange(e.target.value)}
+      />
+      {hint && (
+        <span className="text-xs font-normal text-slate-500">{hint}</span>
+      )}
+    </label>
+  );
 }
-export function RichTextEditor({ label, value, onChange }: { label: string; value?: string; onChange: (value: string) => void }) {
+export function RichTextEditor({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value?: string;
+  onChange: (value: string) => void;
+}) {
   const [preview, setPreview] = useState(false);
   const editorRef = useRef<HTMLTextAreaElement>(null);
-  function wrap(mark: string) { const el = editorRef.current; if (!el) return; const start = el.selectionStart; const end = el.selectionEnd; const current = value || ""; const selected = current.slice(start, end) || "text"; const next = `${current.slice(0, start)}${mark}${selected}${mark}${current.slice(end)}`; onChange(next); requestAnimationFrame(() => { el.focus(); el.setSelectionRange(start + mark.length, start + mark.length + selected.length); }); }
-  return <div className="grid gap-1.5 text-sm font-medium text-slate-800"><div className="flex items-center justify-between"><span>{label}</span><button type="button" onClick={() => setPreview(v => !v)} className="text-xs font-medium text-blue-700">{preview ? "Edit text" : "Preview"}</button></div><div className="flex gap-1 rounded-t-md border border-b-0 border-slate-300 bg-slate-50 p-1"><button type="button" onClick={() => wrap("**")} className="rounded px-2 py-1 text-xs hover:bg-white"><b>Bold</b></button><button type="button" onClick={() => wrap("*")} className="rounded px-2 py-1 text-xs hover:bg-white"><i>Italic</i></button><button type="button" onClick={() => onChange(`${value || ""}\n\n- New list item`)} className="rounded px-2 py-1 text-xs hover:bg-white">List</button><button type="button" onClick={() => onChange(`${value || ""}\n\n[Link text](https://)`)} className="rounded px-2 py-1 text-xs hover:bg-white">Link</button></div>{preview ? <div className="prose min-h-32 max-w-none rounded-b-md border border-slate-300 p-3 text-sm"><ReactMarkdown>{value || "Nothing to preview."}</ReactMarkdown></div> : <textarea ref={editorRef} className={`${inputClass} rounded-t-none`} rows={7} value={value || ""} onChange={e => onChange(e.target.value)} placeholder="Write content with the formatting buttons or Markdown."/>}</div>;
-}
-
-export function MediaPicker({ label, value = [], onChange, folder, multiple = false, videos = false }: { label: string; value?: MediaAsset[]; onChange: (value: MediaAsset[]) => void; folder: string; multiple?: boolean; videos?: boolean }) {
-  const [progress, setProgress] = useState(0); const [uploadError, setUploadError] = useState(""); const [dragging, setDragging] = useState(false); const inputRef = useRef<HTMLInputElement>(null);
-  function upload(files: FileList | File[]) {
-    const selected = Array.from(files); if (!selected.length) return;
-    const data = new FormData(); data.append("folder", folder); selected.forEach(file => data.append("files", file));
-    const request = new XMLHttpRequest(); setProgress(1); setUploadError("");
-    request.upload.onprogress = event => { if (event.lengthComputable) setProgress(Math.round((event.loaded / event.total) * 100)); };
-    request.onload = () => { setProgress(0); try { const body = JSON.parse(request.responseText); if (request.status < 200 || request.status >= 300) throw new Error(body.error || "Upload failed."); const assets = body as MediaAsset[]; onChange(multiple ? [...value, ...assets] : assets.slice(0, 1)); } catch (error) { setUploadError(error instanceof Error ? error.message : "Upload failed."); } };
-    request.onerror = () => { setProgress(0); setUploadError("Upload failed. Check your connection and try again."); };
-    request.open("POST", "/api/admin/media"); request.send(data);
+  function wrap(mark: string) {
+    const el = editorRef.current;
+    if (!el) return;
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    const current = value || "";
+    const selected = current.slice(start, end) || "text";
+    const next = `${current.slice(0, start)}${mark}${selected}${mark}${current.slice(end)}`;
+    onChange(next);
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(
+        start + mark.length,
+        start + mark.length + selected.length,
+      );
+    });
   }
-  const accept = videos ? "image/*,video/mp4,video/webm,video/quicktime" : "image/*";
-  const move = (index: number, delta: number) => { const target = index + delta; if (target < 0 || target >= value.length) return; const next = [...value]; [next[index], next[target]] = [next[target], next[index]]; onChange(next); };
-  return <div className="grid gap-2 text-sm font-medium text-slate-800"><span>{label}</span><div onDragOver={e => { e.preventDefault(); setDragging(true); }} onDragLeave={() => setDragging(false)} onDrop={e => { e.preventDefault(); setDragging(false); upload(e.dataTransfer.files); }} className={`rounded-lg border-2 border-dashed p-3 transition ${dragging ? "border-red-500 bg-red-50" : "border-slate-300 bg-slate-50"}`}><input ref={inputRef} hidden type="file" accept={accept} multiple={multiple} onChange={e => { if (e.target.files) upload(e.target.files); e.target.value = ""; }}/><button type="button" onClick={() => inputRef.current?.click()} className="w-full py-2 text-center text-sm text-slate-700">Drop {videos ? "files" : "an image"} here or <span className="font-semibold text-red-700">browse</span></button>{progress > 0 && <progress className="mt-2 w-full" max={100} value={progress}/>} {uploadError && <p role="alert" className="text-xs text-red-700">{uploadError}</p>}</div><div className="grid gap-2 sm:grid-cols-2">{value.map((asset, index) => <div key={`${asset.id}-${index}`} className="flex min-w-0 items-center gap-3 rounded-lg border p-2">{asset.mimeType?.startsWith("video/") ? <video src={`/media/${asset.url}`} controls className="h-16 w-20 rounded object-cover"/> : <img src={`/media/${asset.thumbnailPath || asset.url}`} alt={asset.altText || ""} className="h-16 w-20 rounded object-cover"/>}<div className="min-w-0 flex-1"><p className="truncate text-xs font-medium">{asset.name}</p><input aria-label={`${label} alt text`} className="mt-1 w-full rounded border px-2 py-1 text-xs font-normal" placeholder="Alt text" value={asset.altText || ""} onChange={e => onChange(value.map((item, i) => i === index ? { ...item, altText: e.target.value } : item))}/></div>{multiple&&<div className="flex flex-col"><button type="button" aria-label="Move media up" disabled={index===0} onClick={()=>move(index,-1)} className="px-2 text-xs disabled:opacity-30">↑</button><button type="button" aria-label="Move media down" disabled={index===value.length-1} onClick={()=>move(index,1)} className="px-2 text-xs disabled:opacity-30">↓</button></div>}<button type="button" aria-label="Remove media" className="px-2 text-lg text-red-700" onClick={() => { if (label.toLowerCase().includes("gallery") && !window.confirm("Remove this image from the gallery item?")) return; onChange(value.filter((_, i) => i !== index)); }}>×</button></div>)}</div></div>;
+  return (
+    <div className="grid gap-1.5 text-sm font-medium text-slate-800">
+      <div className="flex items-center justify-between">
+        <span>{label}</span>
+        <button
+          type="button"
+          onClick={() => setPreview((v) => !v)}
+          className="text-xs font-medium text-blue-700"
+        >
+          {preview ? "Edit text" : "Preview"}
+        </button>
+      </div>
+      <div className="flex gap-1 rounded-t-md border border-b-0 border-slate-300 bg-slate-50 p-1">
+        <button
+          type="button"
+          onClick={() => wrap("**")}
+          className="rounded px-2 py-1 text-xs hover:bg-white"
+        >
+          <b>Bold</b>
+        </button>
+        <button
+          type="button"
+          onClick={() => wrap("*")}
+          className="rounded px-2 py-1 text-xs hover:bg-white"
+        >
+          <i>Italic</i>
+        </button>
+        <button
+          type="button"
+          onClick={() => onChange(`${value || ""}\n\n- New list item`)}
+          className="rounded px-2 py-1 text-xs hover:bg-white"
+        >
+          List
+        </button>
+        <button
+          type="button"
+          onClick={() => onChange(`${value || ""}\n\n[Link text](https://)`)}
+          className="rounded px-2 py-1 text-xs hover:bg-white"
+        >
+          Link
+        </button>
+      </div>
+      {preview ? (
+        <div className="prose min-h-32 max-w-none rounded-b-md border border-slate-300 p-3 text-sm">
+          <ReactMarkdown>{value || "Nothing to preview."}</ReactMarkdown>
+        </div>
+      ) : (
+        <textarea
+          ref={editorRef}
+          className={`${inputClass} rounded-t-none`}
+          rows={7}
+          value={value || ""}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Write content with the formatting buttons or Markdown."
+        />
+      )}
+    </div>
+  );
+}
+function getMediaUrl(path?: string | null) {
+  if (!path) return "";
+
+  if (/^(https?:)?\/\//i.test(path)) {
+    return path;
+  }
+
+  if (path.startsWith("/media/")) {
+    return path;
+  }
+
+  if (path.startsWith("/")) {
+    return path;
+  }
+
+  return `/media/${path.replace(/^\/+/, "")}`;
+}
+export function MediaPicker({
+  label,
+  value = [],
+  onChange,
+  folder,
+  multiple = false,
+  videos = false,
+}: {
+  label: string;
+  value?: MediaAsset[];
+  onChange: (value: MediaAsset[]) => void;
+  folder: string;
+  multiple?: boolean;
+  videos?: boolean;
+}) {
+  const [progress, setProgress] = useState(0);
+  const [uploadError, setUploadError] = useState("");
+  const [dragging, setDragging] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  function upload(files: FileList | File[]) {
+    const selected = Array.from(files);
+    if (!selected.length) return;
+    const data = new FormData();
+    data.append("folder", folder);
+    selected.forEach((file) => data.append("files", file));
+    const request = new XMLHttpRequest();
+    setProgress(1);
+    setUploadError("");
+    request.upload.onprogress = (event) => {
+      if (event.lengthComputable)
+        setProgress(Math.round((event.loaded / event.total) * 100));
+    };
+    request.onload = () => {
+      setProgress(0);
+      try {
+        const body = JSON.parse(request.responseText);
+        if (request.status < 200 || request.status >= 300)
+          throw new Error(body.error || "Upload failed.");
+        const assets = body as MediaAsset[];
+        onChange(multiple ? [...value, ...assets] : assets.slice(0, 1));
+      } catch (error) {
+        setUploadError(
+          error instanceof Error ? error.message : "Upload failed.",
+        );
+      }
+    };
+    request.onerror = () => {
+      setProgress(0);
+      setUploadError("Upload failed. Check your connection and try again.");
+    };
+    request.open("POST", "/api/admin/media");
+    request.send(data);
+  }
+  const accept = videos
+    ? "image/*,video/mp4,video/webm,video/quicktime"
+    : "image/*";
+  const move = (index: number, delta: number) => {
+    const target = index + delta;
+    if (target < 0 || target >= value.length) return;
+    const next = [...value];
+    [next[index], next[target]] = [next[target], next[index]];
+    onChange(next);
+  };
+  return (
+    <div className="grid gap-2 text-sm font-medium text-slate-800">
+      <span>{label}</span>
+      <div
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragging(false);
+          upload(e.dataTransfer.files);
+        }}
+        className={`rounded-lg border-2 border-dashed p-3 transition ${dragging ? "border-red-500 bg-red-50" : "border-slate-300 bg-slate-50"}`}
+      >
+        <input
+          ref={inputRef}
+          hidden
+          type="file"
+          accept={accept}
+          multiple={multiple}
+          onChange={(e) => {
+            if (e.target.files) upload(e.target.files);
+            e.target.value = "";
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          className="w-full py-2 text-center text-sm text-slate-700"
+        >
+          Drop {videos ? "files" : "an image"} here or{" "}
+          <span className="font-semibold text-red-700">browse</span>
+        </button>
+        {progress > 0 && (
+          <progress className="mt-2 w-full" max={100} value={progress} />
+        )}{" "}
+        {uploadError && (
+          <p role="alert" className="text-xs text-red-700">
+            {uploadError}
+          </p>
+        )}
+      </div>
+      <div className="grid gap-2 sm:grid-cols-2">
+        {value.map((asset, index) => (
+          <div
+            key={`${asset.id}-${index}`}
+            className="flex min-w-0 items-center gap-3 rounded-lg border p-2"
+          >
+            {asset.mimeType?.startsWith("video/") ? (
+              <video
+                src={getMediaUrl(asset.url)}
+                controls
+                className="h-16 w-20 rounded object-cover"
+              />
+            ) : (
+              <img
+                src={getMediaUrl(asset.url)}
+                alt={asset.altText || asset.name || ""}
+                className="h-16 w-20 rounded object-cover"
+                onError={(e) => {
+                  console.error(
+                    "MEDIA PREVIEW FAILED:",
+                    JSON.stringify(
+                      {
+                        originalUrl: asset.url,
+                        thumbnailPath: asset.thumbnailPath,
+                        finalSrc: e.currentTarget.src,
+                        mimeType: asset.mimeType,
+                        assetId: asset.id,
+                      },
+                      null,
+                      2,
+                    ),
+                  );
+                }}
+              />
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-medium">{asset.name}</p>
+              <input
+                aria-label={`${label} alt text`}
+                className="mt-1 w-full rounded border px-2 py-1 text-xs font-normal"
+                placeholder="Alt text"
+                value={asset.altText || ""}
+                onChange={(e) =>
+                  onChange(
+                    value.map((item, i) =>
+                      i === index ? { ...item, altText: e.target.value } : item,
+                    ),
+                  )
+                }
+              />
+            </div>
+            {multiple && (
+              <div className="flex flex-col">
+                <button
+                  type="button"
+                  aria-label="Move media up"
+                  disabled={index === 0}
+                  onClick={() => move(index, -1)}
+                  className="px-2 text-xs disabled:opacity-30"
+                >
+                  ↑
+                </button>
+                <button
+                  type="button"
+                  aria-label="Move media down"
+                  disabled={index === value.length - 1}
+                  onClick={() => move(index, 1)}
+                  className="px-2 text-xs disabled:opacity-30"
+                >
+                  ↓
+                </button>
+              </div>
+            )}
+            <button
+              type="button"
+              aria-label="Remove media"
+              className="px-2 text-lg text-red-700"
+              onClick={() => {
+                if (
+                  label.toLowerCase().includes("gallery") &&
+                  !window.confirm("Remove this image from the gallery item?")
+                )
+                  return;
+                onChange(value.filter((_, i) => i !== index));
+              }}
+            >
+              ×
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }

@@ -1,3 +1,4 @@
+// Vsource-frontend\src\features\cms\components\UniversityEditor.tsx
 "use client";
 
 import { ContentRecord, MediaAsset } from "../types";
